@@ -174,102 +174,6 @@ def load_divide_idx(path, idx_map):
 def resample(arg, train, val, test: torch.LongTensor, path, idx_map, labels, iter, rewrite=True):
     files_files = os.listdir(path)
 
-    if iter != 0 and arg.inductive:###伪标签
-        rewrite = False
-
-        resume_files = os.listdir(arg.out)
-        resume_itrs = [int(item.replace('.pkl', '').split("_")[-1]) for item in resume_files if
-                       'pseudo_labeling_iteration' in item]
-
-        start_itr = 0
-
-        if len(resume_itrs) > 0:
-            start_itr = max(resume_itrs)
-
-        pseudo_lbl_dict = f'{arg.out}/pseudo_labeling_iteration_{start_itr}.pkl'
-        pseudo_lbl_dict = pkl.load(open(pseudo_lbl_dict, 'rb'))
-        pseudo_idx = pseudo_lbl_dict['pseudo_idx']
-        pseudo_target = pseudo_lbl_dict['pseudo_target']
-        nl_idx = pseudo_lbl_dict['nl_idx']
-        nl_mask = pseudo_lbl_dict['nl_mask']
-
-        nl_labels = copy.deepcopy(labels)
-
-        if nl_idx is not None:  # 修改负样本的mask
-            for i, idx in enumerate(nl_idx):
-                nl_labels[idx] = torch.LongTensor(nl_mask[i])
-
-        filenames = ['train', 'unlabeled', 'vali', 'test']
-        ans = []
-
-        for file in filenames:
-            cache = []
-            with open(path + file + '_inductive.map', 'r') as f:
-                for line in f:
-                    cache.append(idx_map.get(int(line)))
-
-            if file == 'train':  # 添加积极标签
-
-                for i, idx in enumerate(pseudo_idx):
-                    cache.append(idx)
-
-                    temp = np.zeros(labels[0].shape[0])
-                    temp[pseudo_target[i]] = 1
-                    labels[idx] = torch.LongTensor(temp)
-
-                lbl_idx = copy.deepcopy(cache)
-
-            if file == 'train':  # 主动学习
-                pre_iter = 3
-                if iter < 5:
-                    pre_iter = iter - 1
-
-                pre_path = f'{arg.out}/active_learning_iteration_{pre_iter}.pkl'
-
-                if os.path.exists(pre_path):
-                    a = pkl.load(open(pre_path, 'rb')).get("active_learning")
-                    for i in a:
-                        cache.append(idx_map.get(i))
-                    print("\n\tactive_learning_data: ", len(a))
-
-            ans.append(torch.LongTensor(cache))
-
-            # balance the labeled and unlabeled data
-            if len(nl_idx) < len(lbl_idx):
-                exapand_labeled = len(lbl_idx) // len(nl_idx)
-                nl_idx = np.hstack([nl_idx for _ in range(exapand_labeled)])
-                if len(nl_idx) < len(lbl_idx):
-                    diff = len(lbl_idx) - len(nl_idx)
-                    nl_idx = np.hstack((nl_idx, np.random.choice(nl_idx, diff)))
-                else:
-                    assert len(lbl_idx) == len(nl_idx)
-
-            # balance the labeled and unlabeled data
-            if len(nl_idx) > len(lbl_idx):
-                exapand_labeled = len(nl_idx) // len(lbl_idx)
-                lbl_idx = np.hstack([lbl_idx for _ in range(exapand_labeled)])
-
-                if len(lbl_idx) < len(nl_idx):
-                    diff = len(nl_idx) - len(lbl_idx)
-                    lbl_idx = np.hstack((lbl_idx, np.random.choice(lbl_idx, diff)))
-                else:
-                    assert len(lbl_idx) == len(nl_idx)
-
-                ans[0] = torch.LongTensor(lbl_idx)
-
-        ans.append(torch.LongTensor(nl_idx))
-        ans.append(torch.LongTensor(nl_labels))
-
-        print("\n\ttrain: ", ans[0].shape[0],
-              "\n\tunlabeled: ", ans[1].shape[0],
-              "\n\tvali: ", ans[2].shape[0],
-              "\n\ttest: ", ans[3].shape[0],
-              "\n\tnl_idx: ", ans[4].shape[0],
-              "\n\tnl_labels: ", ans[5].shape[0],
-
-              )
-
-        return ans
 
     if 'train_inductive.map' in files_files:##复用数据集
 
@@ -283,6 +187,18 @@ def resample(arg, train, val, test: torch.LongTensor, path, idx_map, labels, ite
             with open(path + file + '_inductive.map', 'r') as f:
                 for line in f:
                     cache.append(idx_map.get(int(line)))
+            if file == 'train' :  # 主动学习
+                pre_iter = 3
+
+                if iter < 5:
+                    pre_iter = iter - 1
+                pre_path = f'{arg.out}/active_learning_iteration_{pre_iter}.pkl'
+
+                if os.path.exists(pre_path):
+                    a = pkl.load(open(pre_path, 'rb')).get("active_learning")
+                    for i in a:
+                        cache.append(idx_map.get(i))
+                    print("\n\tactive_learning_data: ", len(a))
 
             ans.append(torch.LongTensor(cache))
 
