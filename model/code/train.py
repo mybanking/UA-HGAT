@@ -45,7 +45,7 @@ makedirs([logdir, savedir, embdir])
 write_embeddings = True
 HOP = 3
 
-dataset = 'agnews'
+dataset = 'tagmynews'
 
 LR = 0.01 if dataset == 'snippets' else 0.005
 DP = 0.3 if dataset in ['agnews', 'tagmynews'] else 0.3
@@ -377,12 +377,12 @@ for iter in range(0, args.repeat):
 
         all_node_count = sum([_.shape[0] for _ in adj[0]])
         all_input_idx, all_related_idx = set(), set()
-        # for input_idx, related_idx in [ [torch.cat([idx_train, idx_unlabeled]), idx_related_train],
-        #                                 [idx_val, idx_related_val],
-        #                                 [idx_test, idx_related_test] ]:
-        for input_idx, related_idx in [[idx_train, idx_related_train],
-                                       [idx_val, idx_related_val],
-                                       [idx_test, idx_related_test]]:
+        for input_idx, related_idx in [ [torch.cat([idx_train, idx_unlabeled]), idx_related_train],
+                                        [idx_val, idx_related_val],
+                                        [idx_test, idx_related_test] ]:
+        # for input_idx, related_idx in [[idx_train, idx_related_train],
+        #                                [idx_val, idx_related_val],
+        #                                [idx_test, idx_related_test]]:
             print("# input_nodes: {}, # related_nodes: {} / {}".format(
                 len(input_idx), len(related_idx), all_node_count))
             all_input_idx.update(input_idx.numpy().tolist())
