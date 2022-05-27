@@ -644,7 +644,7 @@ for iter in range(0, args.repeat):
     # pseudo-label generation and selection
     if args.inductive:
         pl_loss, pl_acc, pl_acc_pos, total_sel_pos, pl_acc_neg, total_sel_neg, unique_sel_neg, pseudo_label_dict = pseudo_labeling(
-            args, input_adj_unlabel, input_features_unlabel, idx_out_unlabeled, idx_unlabeled, labels, model, iter,idx_map,iter)
+            args, input_adj_unlabel, input_features_unlabel, idx_out_unlabeled, idx_unlabeled, labels, model, iter)
 
         # 存伪标签的字典
         path1 = f'{args.out}/pseudo_labeling_iteration_{iter}.pkl'

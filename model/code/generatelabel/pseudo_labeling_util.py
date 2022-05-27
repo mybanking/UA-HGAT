@@ -10,7 +10,7 @@ from .utils import enable_dropout
 import pickle as pkl
 
 
-def pseudo_labeling(args, input_adj_test,input_features_test,idx_out_test,idx_test,labels, model, itr,idx_map,iter):
+def pseudo_labeling(args, input_adj_test,input_features_test,idx_out_test,idx_test,labels, model, itr):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
