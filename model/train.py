@@ -361,12 +361,12 @@ for iter in range(0, args.repeat):
             nl_labels = None
             nl_idx = None
         else:
-            idx_train, idx_unlabeled, idx_val, idx_test, nl_idx, nl_labels = resample(args, idx_train_ori, idx_val_ori,
-                                                                                      idx_test_ori, path, idx_map,
-                                                                                      labels, iter)
-            # idx_train, idx_unlabeled, idx_val, idx_test = resample(args, idx_train_ori, idx_val_ori,
+            # idx_train, idx_unlabeled, idx_val, idx_test, nl_idx, nl_labels = resample(args, idx_train_ori, idx_val_ori,
             #                                                                           idx_test_ori, path, idx_map,
             #                                                                           labels, iter)
+            idx_train, idx_unlabeled, idx_val, idx_test = resample(args, idx_train_ori, idx_val_ori,
+                                                                                      idx_test_ori, path, idx_map,
+                                                                                      labels, iter)
             # nl_labels = None
             # nl_idx = None
 
