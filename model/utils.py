@@ -208,17 +208,6 @@ def resample(arg, train, val, test: torch.LongTensor, path, idx_map, labels, ite
                 for line in f:
                     cache.append(idx_map.get(int(line)))
 
-            if file == 'train':  # 添加积极标签
-
-                for i, idx in enumerate(pseudo_idx):
-                    cache.append(idx)
-
-                    temp = np.zeros(labels[0].shape[0])
-                    temp[pseudo_target[i]] = 1
-                    labels[idx] = torch.LongTensor(temp)
-
-                lbl_idx = copy.deepcopy(cache)
-
             if file == 'train':  # 主动学习
                 pre_iter = 3
                 if iter < 5:
@@ -232,7 +221,24 @@ def resample(arg, train, val, test: torch.LongTensor, path, idx_map, labels, ite
                         cache.append(idx_map.get(i))
                     print("\n\tactive_learning_data: ", len(a))
 
+            if file == 'train':  # 添加积极标签
+
+                for i, idx in enumerate(pseudo_idx):
+
+                    if idx in cache:
+                        print(idx)
+                        continue
+
+                    cache.append(idx)
+
+                    temp = np.zeros(labels[0].shape[0])
+                    temp[pseudo_target[i]] = 1
+                    labels[idx] = torch.LongTensor(temp)
+
+                lbl_idx = copy.deepcopy(cache)
+
             ans.append(torch.LongTensor(cache))
+
 
             # balance the labeled and unlabeled data
             if len(nl_idx) < len(lbl_idx):
