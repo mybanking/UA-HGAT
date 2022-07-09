@@ -223,28 +223,29 @@ def resample(arg, train, val, test: torch.LongTensor, path, idx_map, labels, ite
 
             ans.append(torch.LongTensor(cache))
 
-            # balance the labeled and unlabeled data
-            if len(nl_idx) < len(lbl_idx):
-                exapand_labeled = len(lbl_idx) // len(nl_idx)
-                nl_idx = np.hstack([nl_idx for _ in range(exapand_labeled)])
+            if len(nl_idx)!=0:
+                # balance the labeled and unlabeled data
                 if len(nl_idx) < len(lbl_idx):
-                    diff = len(lbl_idx) - len(nl_idx)
-                    nl_idx = np.hstack((nl_idx, np.random.choice(nl_idx, diff)))
-                else:
-                    assert len(lbl_idx) == len(nl_idx)
+                    exapand_labeled = len(lbl_idx) // len(nl_idx)
+                    nl_idx = np.hstack([nl_idx for _ in range(exapand_labeled)])
+                    if len(nl_idx) < len(lbl_idx):
+                        diff = len(lbl_idx) - len(nl_idx)
+                        nl_idx = np.hstack((nl_idx, np.random.choice(nl_idx, diff)))
+                    else:
+                        assert len(lbl_idx) == len(nl_idx)
 
-            # balance the labeled and unlabeled data
-            if len(nl_idx) > len(lbl_idx):
-                exapand_labeled = len(nl_idx) // len(lbl_idx)
-                lbl_idx = np.hstack([lbl_idx for _ in range(exapand_labeled)])
+                # balance the labeled and unlabeled data
+                if len(nl_idx) > len(lbl_idx):
+                    exapand_labeled = len(nl_idx) // len(lbl_idx)
+                    lbl_idx = np.hstack([lbl_idx for _ in range(exapand_labeled)])
 
-                if len(lbl_idx) < len(nl_idx):
-                    diff = len(nl_idx) - len(lbl_idx)
-                    lbl_idx = np.hstack((lbl_idx, np.random.choice(lbl_idx, diff)))
-                else:
-                    assert len(lbl_idx) == len(nl_idx)
+                    if len(lbl_idx) < len(nl_idx):
+                        diff = len(nl_idx) - len(lbl_idx)
+                        lbl_idx = np.hstack((lbl_idx, np.random.choice(lbl_idx, diff)))
+                    else:
+                        assert len(lbl_idx) == len(nl_idx)
 
-                ans[0] = torch.LongTensor(lbl_idx)
+                    ans[0] = torch.LongTensor(lbl_idx)
 
         ans.append(torch.LongTensor(nl_idx))
         ans.append(torch.LongTensor(nl_labels))

@@ -260,20 +260,24 @@ def train_with_nl_pl(epoch,
     loss_ce += F.cross_entropy(output[0][idx_out_train][:, :labels.shape[1]],
                                labels[idx_train].max(1)[1].type_as(labels), reduction='mean')
 
-    nl_logits = output[0][idx_out_nl][:, :labels.shape[1]]
-    pre_nl = F.softmax(nl_logits, dim=1)
-    pre_nl = 1 - pre_nl
-    pre_nl = torch.clamp(pre_nl, 1e-7, 1.0)
-    nl_mask = nl_labels[nl_idx]
+    if len(idx_out_nl)!=0:
 
-    if args.no_cuda:
-        y_nl = torch.ones((nl_logits.shape)).to(device='cpu', dtype=output[0].dtype)
+        nl_logits = output[0][idx_out_nl][:, :labels.shape[1]]
+        pre_nl = F.softmax(nl_logits, dim=1)
+        pre_nl = 1 - pre_nl
+        pre_nl = torch.clamp(pre_nl, 1e-7, 1.0)
+        nl_mask = nl_labels[nl_idx]
+
+        if args.no_cuda:
+            y_nl = torch.ones((nl_logits.shape)).to(device='cpu', dtype=output[0].dtype)
+        else:
+            y_nl = torch.ones((nl_logits.shape)).to(device='cuda', dtype=output[0].dtype)
+        loss_nl += torch.mean(
+            (-torch.sum((y_nl * torch.log(pre_nl)) * nl_mask, dim=-1)) / (torch.sum(nl_mask, dim=-1) + 1e-7))
+
+        loss_train = loss_ce + loss_nl
     else:
-        y_nl = torch.ones((nl_logits.shape)).to(device='cuda', dtype=output[0].dtype)
-    loss_nl += torch.mean(
-        (-torch.sum((y_nl * torch.log(pre_nl)) * nl_mask, dim=-1)) / (torch.sum(nl_mask, dim=-1) + 1e-7))
-
-    loss_train = loss_ce + loss_nl
+        loss_train = loss_ce
 
     print(' | loss: {:.4f}'.format(loss_train.item()), end='')
 
