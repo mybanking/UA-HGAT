@@ -2,7 +2,7 @@ from itertools import groupby
 
 filenames = ['train']
 ans = []
-path = './model/data/tagmynews'
+path = './model/data/twitter'
 
 nums = 10
 
@@ -14,7 +14,7 @@ with open(path +'/mapindex.txt', 'r',encoding='utf-8') as f:
 
 f.close()
 textmap =  dict()
-with open(path +'/tagmynews.txt', 'r',encoding="utf-8") as f:
+with open(path +'/twitter.txt', 'r',encoding="utf-8") as f:
     for line in f:
         line =line.strip().split('\t')
         textmap[line[0]] = line[1]

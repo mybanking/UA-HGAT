@@ -192,7 +192,7 @@ def pseudo_labeling(args, input_adj_test, input_features_test, idx_out_test, idx
 def least_confident(list, idx_test, idx_map, args, iter):
     list = 1 - list
 
-    list = torch.topk(list, 70)
+    list = torch.topk(list, 20)
 
     index = []
     index_active_learning = []
