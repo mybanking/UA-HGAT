@@ -547,7 +547,7 @@ for iter in range(0, args.repeat):
 
     for epoch in range(args.epochs):
 
-        if iter == 0 or (not args.inductive) or nl_idx is None:
+        if iter == 0 or (not args.inductive) or nl_labels is None:
 
             vali_acc, vali_f1 = train(epoch,
                                       input_adj_train, input_features_train, idx_out_train, idx_train,
