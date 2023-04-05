@@ -1,21 +1,19 @@
-import random
+
 import time
-import pickle
 import numpy as np
 import torch
 import torch.nn.functional as F
-from tqdm import tqdm
-from .misc import AverageMeter, accuracy
+from .misc import AverageMeter
 from .utils import enable_dropout
-import pickle as pkl
+
 
 
 def pseudo_labeling(args, input_adj_test, input_features_test, idx_out_test, idx_test, labels, model, itr):
-    batch_time = AverageMeter()
+
     data_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
-    top5 = AverageMeter()
+
     end = time.time()
     pseudo_idx = []
     pseudo_target = []
@@ -32,11 +30,10 @@ def pseudo_labeling(args, input_adj_test, input_features_test, idx_out_test, idx
     else:
         f_pass = 1
 
-    # if not args.no_progress:
-    #     data_loader = tqdm(data_loader)
+
 
     with torch.no_grad():
-        # for batch_idx, (inputs,indexs, idx) in enumerate(data_loader):
+
         data_time.update(time.time() - end)
         inputs = input_features_test
 
@@ -87,37 +84,13 @@ def pseudo_labeling(args, input_adj_test, input_features_test, idx_out_test, idx
         pseudo_idx.extend(idx_test[selected_idx].cpu().numpy().tolist())
         gt_target.extend(targets[selected_idx].cpu().numpy().tolist())
 
-        loss = F.cross_entropy(outputs, targets.to(dtype=torch.long))
-
-        # loss = F.nll_loss(outputs, targets)
-
-        # prec1, prec5 = accuracy(outputs[selected_idx], targets[selected_idx], topk=(1, 2))
-        #
-        # losses.update(loss.item(), idx_out_test.shape[0])
-        # top1.update(prec1.item(), idx_out_test.shape[0])
-        # top5.update(prec5.item(), idx_out_test.shape[0])
-        # batch_time.update(time.time() - end)
-        # end = time.time()
-        # if not args.no_progress:
-        #     data_loader.set_description("Pseudo-Labeling Iter: {batch:4}/{iter:4}. Data: {data:.3f}s. Batch: {bt:.3f}s. Loss: {loss:.4f}. top1: {top1:.2f}. top5: {top5:.2f}. ".format(
-        #         batch=batch_idx + 1,
-        #         iter=len(data_loader),
-        #         data=data_time.avg,
-        #         bt=batch_time.avg,
-        #         loss=losses.avg,
-        #         top1=top1.avg,
-        #         top5=top5.avg,
-        #     ))
-    # if not args.no_progress:
-    #     data_loader.close()
-
     pseudo_target = np.array(pseudo_target)
     gt_target = np.array(gt_target)
     pseudo_maxstd = np.array(pseudo_maxstd)
     pseudo_idx = np.array(pseudo_idx)
 
     # class balance the selected pseudo-labels
-    if itr < args.class_blnc - 1:
+    if len(pseudo_target) > 0:
         min_count = 5000000  # arbitary large value
         for class_idx in range(labels.shape[1]):
             class_len = len(np.where(pseudo_target == class_idx)[0])
@@ -140,10 +113,10 @@ def pseudo_labeling(args, input_adj_test, input_features_test, idx_out_test, idx
         pseudo_target = pseudo_target[blnc_idx_list]
         pseudo_idx = pseudo_idx[blnc_idx_list]
         gt_target = gt_target[blnc_idx_list]
-
-    pseudo_labeling_acc = (pseudo_target == gt_target) * 1
-    pseudo_labeling_acc = (sum(pseudo_labeling_acc) / len(pseudo_labeling_acc)) * 100
-    print(f'Pseudo-Labeling Accuracy (positive): {pseudo_labeling_acc}, Total Selected: {len(pseudo_idx)}')
+    pseudo_labeling_acc = (pseudo_target == gt_target)*1
+    if len(pseudo_labeling_acc) > 0:
+        pseudo_labeling_acc = (sum(pseudo_labeling_acc)/len(pseudo_labeling_acc))*100
+        print(f'Pseudo-Labeling Accuracy (positive): {pseudo_labeling_acc}, Total Selected: {len(pseudo_idx)}')
 
     pseudo_nl_mask = []
     pseudo_nl_idx = []
@@ -154,6 +127,7 @@ def pseudo_labeling(args, input_adj_test, input_features_test, idx_out_test, idx
             pseudo_nl_mask.append(nl_mask[i])
             pseudo_nl_idx.append(idx_list[i])
             nl_gt_list.append(gt_list[i])
+
 
     if len(nl_gt_list) != 0:
         nl_gt_list = np.array(nl_gt_list)
@@ -177,14 +151,7 @@ def pseudo_labeling(args, input_adj_test, input_features_test, idx_out_test, idx
         nl_accuracy_final = 0
         nl_accuracy = []
         pseudo_nl_mask =[]
-    # indexs
-    #
-    # idx_map_reverse = dict(map(lambda t: (t[1], t[0]), idx_map.items()))
-    # filenames = ['train', 'unlabeled']
-    # ans = [idx_train, idx_unlabeled, idx_val, idx_test]
-    # for i in range(4):
-    #     with open(path + filenames[i] + '_inductive.map', 'w') as f:
-    #         f.write("\n".join(map(str, map(idx_map_reverse.get, ans[i].numpy()))))
+
 
     return losses.avg, top1.avg, pseudo_labeling_acc, len(pseudo_idx), nl_accuracy_final, len(nl_accuracy), len(
         pseudo_nl_mask), pseudo_label_dict

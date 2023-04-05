@@ -32,7 +32,7 @@ import warnings
 warnings.filterwarnings("ignore")
 from utils_inductive import transform_dataset_by_idx
 from models import HGAT
-import gc, sys
+import sys
 from print_log import Logger
 
 logdir = "log/"
@@ -43,7 +43,7 @@ makedirs([logdir, savedir, embdir])
 write_embeddings = True
 HOP = 3
 
-dataset = 'agnews'
+dataset = 'example'
 
 LR = 0.01 if dataset == 'snippets' else 0.005
 DP = 0.3 if dataset in ['agnews', 'tagmynews'] else 0.3
@@ -210,14 +210,11 @@ def train(epoch,
         O, L = output[idx_out_train], labels[idx_train]
     loss_train = LOSS(O, L)
     print(' | loss: {:.4f}'.format(loss_train.item()), end='')
-    acc_train, f1_train = evaluate(O, L)
     loss_train.backward()
     optimizer.step()
 
     with torch.no_grad():
-
         model.eval()
-
         output = model(input_features_val, input_adj_val)
         if isinstance(output, list):
             loss_val = LOSS(output[0][idx_out_val], labels[idx_val])
@@ -249,16 +246,13 @@ def train_with_nl_pl(epoch,
 
     output = model(input_features_train, input_adj_train)
 
-    #
-    # positive_idx = idx_out_train # the mask for negative learning is all ones
-    # nl_idx = idx_out_nl
     loss_ce = 0
     loss_nl = 0
 
     loss_ce += F.cross_entropy(output[0][idx_out_train][:, :labels.shape[1]],
                                labels[idx_train].max(1)[1].type_as(labels), reduction='mean')
 
-    if len(idx_out_nl)!=0:
+    if len(idx_out_nl) != 0:
 
         nl_logits = output[0][idx_out_nl][:, :labels.shape[1]]
         pre_nl = F.softmax(nl_logits, dim=1)
@@ -267,9 +261,9 @@ def train_with_nl_pl(epoch,
         nl_mask = nl_labels[nl_idx]
 
         if args.no_cuda:
-            y_nl = torch.ones((nl_logits.shape)).to(device='cpu', dtype=output[0].dtype)
-        else:
             y_nl = torch.ones((nl_logits.shape)).to(device='cuda', dtype=output[0].dtype)
+        else:
+            y_nl = torch.ones((nl_logits.shape)).to(device='cpu', dtype=output[0].dtype)
         loss_nl += torch.mean(
             (-torch.sum((y_nl * torch.log(pre_nl)) * nl_mask, dim=-1)) / (torch.sum(nl_mask, dim=-1) + 1e-7))
 
@@ -346,17 +340,8 @@ for iter in range(0, args.repeat):
         print("Transfer to be inductive.")
 
         # resample
-        # 之前的数据集划分：  训练集20 * class   验证集1000   其他的测试集
-        # 这里换成：         训练集不变，  验证集 -> 测试集，
-        #                   原本的测试集拆出和训练集一样多的样本作为验证集，其余作为无标注样本
-
-        # 重新划分数据集 训练集不变160
-        # 测试集 ===>  验证集 160   无标签数据5*160 测试集 200-6*160
-
         # 第二轮直接从文件中读取
-
         if iter == 0:
-
             idx_train, idx_unlabeled, idx_val, idx_test = resample(args, idx_train_ori, idx_val_ori, idx_test_ori, path,
                                                                    idx_map, labels, iter)
 
@@ -366,20 +351,8 @@ for iter in range(0, args.repeat):
             idx_train, idx_unlabeled, idx_val, idx_test, nl_idx, nl_labels = resample(args, idx_train_ori, idx_val_ori,
                                                                                       idx_test_ori, path, idx_map,
                                                                                       labels, iter)
-            # idx_train, idx_unlabeled, idx_val, idx_test = resample(args, idx_train_ori, idx_val_ori,
-            #                                                                           idx_test_ori, path, idx_map,
-            #                                                                           labels, iter)
-            # nl_labels = None
-            # nl_idx = None
 
-        # if experimentType == 'unlabeled':
-        #     bias = int(idx_unlabeled.shape[0] * supPara)
-        #     idx_unlabeled = idx_unlabeled[: bias]
-        #     print("\n\tidx_train: {}, idx_unlabeled: {},\n\tidx_val: {}, idx_test: {}".format(
-        #             idx_train.shape[0], idx_unlabeled.shape[0], idx_val.shape[0], idx_test.shape[0]))
 
-        # input_adj_train, input_features_train, idx_related_train, idx_out_train = \
-        #         transform_dataset_by_idx(adj,features,torch.cat([idx_train, idx_unlabeled]),idx_train, hop=HOP)
         if iter == 0:
             input_adj_train, input_features_train, idx_related_train, idx_out_train = \
                 transform_dataset_by_idx(adj, features, torch.cat([idx_train, idx_unlabeled]), idx_train, hop=HOP)
@@ -408,9 +381,7 @@ for iter in range(0, args.repeat):
 
         all_node_count = sum([_.shape[0] for _ in adj[0]])
         all_input_idx, all_related_idx = set(), set()
-        # for input_idx, related_idx in [ [torch.cat([idx_train, idx_unlabeled]), idx_related_train],
-        #                                 [idx_val, idx_related_val],
-        #                                 [idx_test, idx_related_test] ]:
+
         for input_idx, related_idx in [[idx_train, idx_related_train],
                                        [idx_val, idx_related_val],
                                        [idx_test, idx_related_test],
@@ -437,9 +408,7 @@ for iter in range(0, args.repeat):
 
         all_node_count = sum([_.shape[0] for _ in adj[0]])
         all_input_idx, all_related_idx = set(), set()
-        # for input_idx, related_idx in [ [torch.cat([idx_train, idx_unlabeled]), idx_related_train],
-        #                                 [idx_val, idx_related_val],
-        #                                 [idx_test, idx_related_test] ]:
+
         for input_idx, related_idx in [[idx_train, idx_related_train],
                                        [idx_val, idx_related_val],
                                        [idx_test, idx_related_test]]:
@@ -449,10 +418,7 @@ for iter in range(0, args.repeat):
             all_related_idx.update(related_idx.numpy().tolist())
         print("Sum: # input_nodes: {}, # related_nodes: {} / {}\n".format(
             len(all_input_idx), len(all_related_idx), all_node_count))
-        # input_adj_train, input_features_train, idx_out_train = adj, features, idx_train_ori
-        # input_adj_val, input_features_val, idx_out_val = adj, features, idx_val_ori
-        # input_adj_test, input_features_test, idx_out_test = adj, features, idx_test_ori
-        # idx_train, idx_val, idx_test = idx_train_ori, idx_val_ori, idx_test_ori
+
 
     if args.cuda:
         N = len(features)
@@ -506,8 +472,6 @@ for iter in range(0, args.repeat):
                  orphan=True,
                  )
 
-    # print(model)
-    print(len(list(model.parameters())))
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     if args.cuda:
@@ -582,34 +546,6 @@ for iter in range(0, args.repeat):
 
             }, True, args.out, f'iteration_{str(iter)}')
 
-    plt.clf()
-    plt.title('Iter ' + str(iter) + 'ACC')
-    plt.xlabel("epoch")
-    plt.ylabel("Acc")
-    # 生成图形
-    x = np.arange(0, args.epochs, 1)
-
-    plt.plot(x, vali_accs, label='vali')
-    plt.plot(x, test_accs, label='test')
-
-    plt.legend()
-
-    plt.savefig('./' + str(iter) + 'acc.jpg')
-
-    plt.clf()
-    plt.title('Iter ' + str(iter) + 'F1')
-    plt.xlabel("epoch")
-    plt.ylabel("F1")
-    # 生成图形
-    x = np.arange(0, args.epochs, 1)
-
-    plt.plot(x, vali_f1s, label='vali')
-    plt.plot(x, test_f1s, label='test')
-
-    plt.legend()
-
-    plt.savefig('./' + str(iter) + 'f.jpg')
-
     All_RESULT.append([iter, test_accs])
     All_RESULT.append([iter, vali_accs])
 
@@ -654,18 +590,6 @@ for iter in range(0, args.repeat):
             ofile.write(
                 f'PL Acc (Negative): {pl_acc_neg}, Total Selected (Negative): {total_sel_neg}, Unique Negative Samples: {unique_sel_neg}\n\n')
 
-plt.clf()
-plt.title('Iters ACC ')
-plt.xlabel("Iter")
-plt.ylabel("ACC")
-# 生成图形
-x = np.arange(0, args.repeat, 1)
-
-plt.plot(x, BestACC, label='Acc')
-
-plt.legend()
-
-plt.savefig('./Iters-ACC.jpg')
 
 print("\n")
 for i in range(len(FINAL_RESULT)):
